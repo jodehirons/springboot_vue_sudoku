@@ -80,7 +80,7 @@ export default {
                     level: this.level
                 }
             }
-            axios.get('http://43.138.171.179:9000/sudoku', data).then((response) => {
+            axios.get('http://localhost:9000/sudoku', data).then((response) => {
                 this.sudoList = response.data.data;
                 this.sudoList.forEach((obj) => {
                     this.sudokuGrids.push(obj.finalResult);
