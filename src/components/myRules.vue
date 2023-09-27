@@ -1,5 +1,6 @@
 <template>
     <div style="display: inline;">
+        <div class="time-display">当前经过时间：{{ elapsedTime }}</div>
         <div class="new-game-box">
             <div class="title">新游戏</div>
             <div class="level-buttons">
@@ -11,7 +12,7 @@
         </div>
         <div class="action-buttons">
             <button class="action-button" @click="confirmAction(showAnswer)">显示答案</button>
-            <button class="action-button" @click="confirmAction(restartlevel)">重新开始</button>
+            <button class="action-button" @click="confirmAction(restartlevel)">开始新游戏</button>
             <button class="action-button" @click="confirmAction(returnMyPage)">返回主页面</button>
         </div>
     </div>
@@ -23,7 +24,18 @@
                 :class="{ 'bold-row': rowIndex % 3 === 0 }">
                 <div v-for="(cell, colIndex) in row" :key="colIndex" class="cell"
                     :class="{ 'bold-cell': colIndex % 3 === 0, 'red-cell': isRed(gridIndex, rowIndex, colIndex) }">
-                    {{ cell === 0 ? '' : cell }}
+                    <template v-if="cell === 0">
+                        <select v-model="sudokuGrids[gridIndex][rowIndex][colIndex]" class="select-box"
+                            @change="checkGameStatus">
+                            <option v-for="option in getAvailableOptions(gridIndex, rowIndex, colIndex)" :value="option"
+                                :key="option">
+                                {{ option }}</option>
+                        </select>
+
+                    </template>
+                    <template v-else>
+                        {{ cell }}
+                    </template>
                 </div>
             </div>
         </div>
@@ -37,31 +49,90 @@ export default {
     data() {
         return {
             level: 1,//初始值设为1
-            sudokuGrids: [],
-            sudoAnswer: [],
-            redCells: [],
+            sudokuGrids: [],//用户保存供玩家游玩的数独
+            sudoAnswer: [],//用户保存数独答案
+            redCells: [],//用户保存数独答案的显示位置
+            startTime: null,
+            elapsedTime: 0
         };
     },
     created() {
         this.level = this.$route.query.level || 1;
         this.fetchSudokuData();
-    },
-    // mounted() {
-    //     const data = {
-    //         params: {
-    //             level: this.level
-    //         }
-    //     }
-    //     axios.get('http://43.138.171.179:9000/sudoku', data).then((response) => {
-    //         this.sudoList = response.data.data;
-    //         this.sudoList.forEach((obj) => {
-    //             this.sudokuGrids.push(obj.finalResult);
-    //             this.sudoAnswer.push(obj.result)
-    //         });
-    //     })
+        this.startTime = Date.now();
+        setInterval(() => {
+            this.elapsedTime = this.elapsedTime_method(); // 更新elapsedTime属性
+        }, 1000);
 
-    // }
+    },
     methods: {
+        // 游戏状态检查，每下一个
+        checkGameStatus() {
+            let gameComplete = true;
+            let gameSuccess = true;
+            for (let i = 0; i < this.sudokuGrids.length; i++) {
+                const sudokuGrid = this.sudokuGrids[i];
+                for (let j = 0; j < sudokuGrid.length; j++) {
+                    const row = sudokuGrid[j];
+                    for (let k = 0; k < row.length; k++) {
+                        const cell = row[k];
+                        if (cell === 0) {
+                            gameComplete = false;
+                            if (!this.isValidMove(i, j, k)) {
+                                gameSuccess = false;
+                                break;
+                            }
+                        }
+                    }
+                    if (!gameSuccess) {
+                        break;
+                    }
+                }
+                if (!gameSuccess) {
+                    break;
+                }
+            }
+            if (gameComplete && gameSuccess) {
+                alert('游戏成功！');
+            } else if (!gameSuccess) {
+                alert('游戏失败！');
+            }
+        },
+        isValidMove(gridIndex, rowIndex, colIndex) {
+            const availableOptions = this.getAvailableOptions(gridIndex, rowIndex, colIndex);
+            if (availableOptions.length === 0) {
+                return false;
+            }
+            return true;
+        },
+        getAvailableOptions(gridIndex, rowIndex, colIndex) {
+            const row = this.sudokuGrids[gridIndex][rowIndex];
+            const column = this.getColumn(colIndex);
+            const grid = this.getGrid(gridIndex, rowIndex, colIndex);
+            const usedNumbers = [...row, ...column, ...grid];
+            const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(num => !usedNumbers.includes(num));
+            return availableOptions;
+        },
+        getColumn(colIndex) {
+            const column = [];
+            for (let i = 0; i < this.sudokuGrids.length; i++) {
+                const row = this.sudokuGrids[i];
+                column.push(row[colIndex]);
+            }
+            return column;
+        },
+        getGrid(gridIndex, rowIndex, colIndex) {
+            const grid = [];
+            const startRow = Math.floor(rowIndex / 3) * 3;
+            const startCol = Math.floor(colIndex / 3) * 3;
+            for (let i = startRow; i < startRow + 3; i++) {
+                const row = this.sudokuGrids[gridIndex][i];
+                for (let j = startCol; j < startCol + 3; j++) {
+                    grid.push(row[j]);
+                }
+            }
+            return grid;
+        },
         confirmAction(handler, ...args) {
             if (window.confirm('确定要执行此操作吗？')) {
                 handler(...args);
@@ -80,7 +151,7 @@ export default {
                     level: this.level
                 }
             }
-            axios.get('http://localhost:9000/sudoku', data).then((response) => {
+            axios.get('http://43.138.171.179:9000/sudoku', data).then((response) => {
                 this.sudoList = response.data.data;
                 this.sudoList.forEach((obj) => {
                     this.sudokuGrids.push(obj.finalResult);
@@ -88,12 +159,14 @@ export default {
                 });
             })
         },
+        // 重新开始游戏，清空页面保存的列表，重新开始一个同样难度的新游戏
         restartlevel() {
             this.redCells = []; //清空redcells
             this.sudokuGrids = []; // 清空sudokuGrids数组
             this.sudoAnswer = []; // 清空sudoAnswer数组
             this.fetchSudokuData();
         },
+        // 回到首页的定向导航
         returnMyPage() {
             this.$router.push({ path: '/' });
 
@@ -127,8 +200,19 @@ export default {
         },
         isRed(gridIndex, rowIndex, colIndex) {
             return this.redCells.some(cell => cell.gridIndex === gridIndex && cell.rowIndex === rowIndex && cell.colIndex === colIndex);
+        },
+        elapsedTime_method() {
+            if (this.startTime) {
+                const currentTime = Date.now();
+                const timeDiff = currentTime - this.startTime;
+                const minutes = Math.floor(timeDiff / 60000);
+                const seconds = Math.floor((timeDiff % 60000) / 1000);
+                return `${minutes}分钟${seconds}秒`;
+            } else {
+                return '';
+            }
         }
-    }
+    },
 
 };
 </script>
@@ -244,5 +328,14 @@ export default {
 
 .red-cell {
     color: red;
+}
+
+.select-box {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #000;
+    padding: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
 }
 </style>

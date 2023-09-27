@@ -3,18 +3,18 @@
     <div class="radio-container">
       <div class="row">
         <input type="radio" id="easy" name="level" value="1" v-model="level">
-        <label for="easy">简单</label>
+        <label for="easy">简单(每张表16空)</label>
 
         <input type="radio" id="normal" name="level" value="2" v-model="level">
-        <label for="normal">普通</label>
+        <label for="normal">普通（每张表25空）</label>
       </div>
 
       <div class="row">
         <input type="radio" id="hard" name="level" value="3" v-model="level">
-        <label for="hard">困难</label>
+        <label for="hard">困难（每张表36空）</label>
 
         <input type="radio" id="very-hard" name="level" value="4" v-model="level">
-        <label for="very-hard">非常困难</label>
+        <label for="very-hard">非常困难（每张表49空）</label>
       </div>
     </div>
 
@@ -31,7 +31,8 @@
       </div>
       <div class="game-rules-content-box">
         <div class="game-rules-content">
-          游戏棋盘是一个9x9的格网，被划分成3x3个区域，每个区域是一块九宫格。 玩家需要在格内填入1到9的数字，其中一些数字在游戏开始时已经给出。 每一行，每一列，以及每一块九宫格区域内的数字必须是唯一的，不允许出现重复。
+          每一张九宫格棋盘是一个9x9的格网，被划分成3x3个区域，每个区域是一块九宫格。 玩家需要在格内填入1到9的数字，其中一些数字在游戏开始时已经给出。 每一行，每一列，以及每一块九宫格区域内的数字必须是唯一的，不允许出现重复。
+          游戏会并发生成九张九宫格表，玩家可以使用下拉框的形式选择填入其中的数字，如果填入所有的答案并且正确则游戏成功，否则如果有一个空格无法继续填入内容则游戏失败。<br>
         </div>
       </div>
     </div>
