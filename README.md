@@ -1,6 +1,9 @@
 # vue_shudo
 
+# 这是一个数独游戏的前端页面
+
 ## Project setup
+
 ```
 npm install
 ```
@@ -22,3 +25,4 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
