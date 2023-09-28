@@ -171,7 +171,8 @@ export default {
                     this.sudoAnswer.push(obj.result)
                 });
                 this.sudokuGrids_copy = JSON.parse(JSON.stringify(this.sudokuGrids)); // 将新获取的数独数据保存到sudokuGrids_copy数组中
-
+                console.log(this.sudoAnswer);
+                console.log(this.sudokuGrids)
             })
 
         },
