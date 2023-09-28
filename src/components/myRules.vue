@@ -12,13 +12,14 @@
         </div>
         <div class="action-buttons">
             <button class="action-button" @click="confirmAction(showAnswer)">显示答案</button>
-            <button class="action-button" @click="confirmAction(restartlevel)">开始新游戏</button>
+            <button class="action-button" @click="confirmAction(restartlevel)">清空填入</button>
+            <button class="action-button" @click="confirmAction(newlevel)">新游戏</button>
             <button class="action-button" @click="confirmAction(returnMyPage)">返回主页面</button>
         </div>
     </div>
 
     <div class="container">
-
+<!-- 使用vue模板语言遍历生成表格 -->
         <div v-for="(sudokuGrid, gridIndex) in sudokuGrids" :key="gridIndex" class="sudoku">
             <div v-for="(row, rowIndex) in sudokuGrid" :key="rowIndex" class="row"
                 :class="{ 'bold-row': rowIndex % 3 === 0 }">
@@ -27,8 +28,8 @@
                     <template v-if="cell === 0">
                         <select v-model="sudokuGrids[gridIndex][rowIndex][colIndex]" class="select-box"
                             @change="checkGameStatus">
-                            <option v-for="option in getAvailableOptions(gridIndex, rowIndex, colIndex)" :value="option"
-                                :key="option">
+                            <option v-for="(option, index) in getAvailableOptions(gridIndex, rowIndex, colIndex)"
+                                :value="option" :key="index">
                                 {{ option }}</option>
                         </select>
 
@@ -50,6 +51,7 @@ export default {
         return {
             level: 1,//初始值设为1
             sudokuGrids: [],//用户保存供玩家游玩的数独
+            sudokuGrids_copy: [],//备份一个数组用于重新开始游戏
             sudoAnswer: [],//用户保存数独答案
             redCells: [],//用户保存数独答案的显示位置
             startTime: null,
@@ -58,7 +60,7 @@ export default {
     },
     created() {
         this.level = this.$route.query.level || 1;
-        this.fetchSudokuData();
+        this.fetchSudokuData();//初始化时取得游戏数据
         this.startTime = Date.now();
         setInterval(() => {
             this.elapsedTime = this.elapsedTime_method(); // 更新elapsedTime属性
@@ -66,7 +68,7 @@ export default {
 
     },
     methods: {
-        // 游戏状态检查，每下一个
+        // 游戏状态检查，每填入一个空都会检查状态，判断游戏是否完成与游戏是否失败
         checkGameStatus() {
             let gameComplete = true;
             let gameSuccess = true;
@@ -98,6 +100,7 @@ export default {
                 alert('游戏失败！');
             }
         },
+        // 判断游戏是否失败，是否有空格被判断无法填入任何数字
         isValidMove(gridIndex, rowIndex, colIndex) {
             const availableOptions = this.getAvailableOptions(gridIndex, rowIndex, colIndex);
             if (availableOptions.length === 0) {
@@ -105,6 +108,7 @@ export default {
             }
             return true;
         },
+        // 根据数独的游戏的规则获取空格能填入的数字
         getAvailableOptions(gridIndex, rowIndex, colIndex) {
             const row = this.sudokuGrids[gridIndex][rowIndex];
             const column = this.getColumn(colIndex);
@@ -133,37 +137,52 @@ export default {
             }
             return grid;
         },
+        // web提醒，提醒玩家是否执行相关按钮操作，玩家选择“确定”才会执行相关操作
         confirmAction(handler, ...args) {
             if (window.confirm('确定要执行此操作吗？')) {
                 handler(...args);
             }
         },
+        // 重新开始当前游戏，重新初始化显示的图表
+        restartlevel() {
+            this.redCells=[];
+            this.sudokuGrids = JSON.parse(JSON.stringify(this.sudokuGrids_copy));
+        },
+        // 根据玩家的选择重新开始不同难度的新游戏
         changeLevel(level) {
             this.level = level;
             this.redCells = []; //清空redcells
             this.sudokuGrids = []; // 清空sudokuGrids数组
             this.sudoAnswer = []; // 清空sudoAnswer数组
+            this.sudokuGrids_copy = [];
             this.fetchSudokuData();
         },
+        // 往后台相应端口发送请求，获取数独游戏的数据，一共的九个对象，每个对象里面都有两张9*9的二维数组，一张是题目，一张是答案
         fetchSudokuData() {
             const data = {
                 params: {
                     level: this.level
                 }
             }
-            axios.get('http://43.138.171.179:9000/sudoku', data).then((response) => {
+            axios.get('http://43.138.171.179:9000/sudoku', data).then((response) => { //相关端口获取数据
                 this.sudoList = response.data.data;
                 this.sudoList.forEach((obj) => {
                     this.sudokuGrids.push(obj.finalResult);
                     this.sudoAnswer.push(obj.result)
                 });
+                this.sudokuGrids_copy = JSON.parse(JSON.stringify(this.sudokuGrids)); // 将新获取的数独数据保存到sudokuGrids_copy数组中
+
             })
+
         },
+
         // 重新开始游戏，清空页面保存的列表，重新开始一个同样难度的新游戏
-        restartlevel() {
-            this.redCells = []; //清空redcells
+        newlevel() {
+            this.startTime = Date.now(),
+                this.redCells = []; //清空redcells
             this.sudokuGrids = []; // 清空sudokuGrids数组
             this.sudoAnswer = []; // 清空sudoAnswer数组
+            this.sudokuGrids_copy = [];
             this.fetchSudokuData();
         },
         // 回到首页的定向导航
@@ -171,10 +190,11 @@ export default {
             this.$router.push({ path: '/' });
 
         },
+        // 将相关的答案展示出来并在相应的位置标红
         showAnswer() {
             const redCells = [];
             for (let i = 0; i < this.sudokuGrids.length; i++) {
-                const sudokuGrid = this.sudokuGrids[i];
+                const sudokuGrid = this.sudokuGrids_copy[i];
                 for (let j = 0; j < sudokuGrid.length; j++) {
                     const row = sudokuGrid[j];
                     for (let k = 0; k < row.length; k++) {
@@ -198,9 +218,11 @@ export default {
             console.log(redCells);
             this.redCells = redCells;
         },
+        // 用于前端页面判断相应的位置是否标红
         isRed(gridIndex, rowIndex, colIndex) {
             return this.redCells.some(cell => cell.gridIndex === gridIndex && cell.rowIndex === rowIndex && cell.colIndex === colIndex);
         },
+        // 用于定时调用获取显示的时间
         elapsedTime_method() {
             if (this.startTime) {
                 const currentTime = Date.now();
