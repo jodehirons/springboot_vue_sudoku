@@ -19,17 +19,16 @@
     </div>
 
     <div class="container">
-<!-- 使用vue模板语言遍历生成表格 -->
+        <!-- 使用vue模板语言遍历生成表格 -->
         <div v-for="(sudokuGrid, gridIndex) in sudokuGrids" :key="gridIndex" class="sudoku">
             <div v-for="(row, rowIndex) in sudokuGrid" :key="rowIndex" class="row"
                 :class="{ 'bold-row': rowIndex % 3 === 0 }">
                 <div v-for="(cell, colIndex) in row" :key="colIndex" class="cell"
                     :class="{ 'bold-cell': colIndex % 3 === 0, 'red-cell': isRed(gridIndex, rowIndex, colIndex) }">
                     <template v-if="cell === 0">
-                        <select v-model="sudokuGrids[gridIndex][rowIndex][colIndex]" class="select-box"
-                            @change="checkGameStatus">
-                            <option v-for="(option, index) in getAvailableOptions(gridIndex, rowIndex, colIndex)"
-                                :value="option" :key="index">
+                        <select v-model="selectedValue" class="select-box"
+                            @change="checkGameStatus(gridIndex, rowIndex, colIndex)">
+                            <option v-for="(option, index) in getAvailableOptions()" :value="option" :key="index">
                                 {{ option }}</option>
                         </select>
 
@@ -55,7 +54,8 @@ export default {
             sudoAnswer: [],//用户保存数独答案
             redCells: [],//用户保存数独答案的显示位置
             startTime: null,
-            elapsedTime: 0
+            elapsedTime: 0,
+            selectedValue: '' //使用一个变量用来监控程序的输入
         };
     },
     created() {
@@ -69,7 +69,43 @@ export default {
     },
     methods: {
         // 游戏状态检查，每填入一个空都会检查状态，判断游戏是否完成与游戏是否失败
-        checkGameStatus() {
+        checkGameStatus(gridIndex, rowIndex, colIndex) {
+            const selectedValue = this.selectedValue;
+            const row = this.sudokuGrids[gridIndex][rowIndex];
+            const column = this.getColumn(colIndex);
+            const grid = this.getGrid(gridIndex, rowIndex, colIndex);
+
+            // 检查当前提交的数字是否已经存在于3x3数组、行或列中
+            if (
+                this.isValueInArray(selectedValue, grid)
+            ) {
+                var result = this.getGrid_index(gridIndex, rowIndex, colIndex, selectedValue);
+                result[0] += 1;
+                result[1] += 1;
+                // 如果已存在，报错并不修改sudokuGrids
+                alert('当前3*3方格中存在已有数字，位于当前九宫格' + result[1] + '行，' + result[0] + '列,请选择其他数字。');
+                this.selectedValue = ''
+            } else if (this.isValueInArray(selectedValue, row)) {
+                var result_row = this.getRow_index(row, selectedValue);
+                result_row += 1;
+                alert('当前行中存在已有数字，位于当前九宫格，当前行,第'+result_row+'列，请选择其他数字。');
+                this.selectedValue = ''
+            }
+            else if (this.isValueInArray(selectedValue, column)) {
+                var result_col = this.getCol_index(column, selectedValue);
+                result_col += 1;
+                alert('当前列中存在已有数字，位于当前九宫格，当前列,第'+result_col+'行，请选择其他数字。');
+                this.selectedValue = ''
+            }
+
+
+            else {
+                // 如果不存在，提交修改sudokuGrids
+                this.sudokuGrids[gridIndex][rowIndex][colIndex] = selectedValue;
+                // 清空selectedValue
+                this.selectedValue = '';
+            }
+
             let gameComplete = true;
             let gameSuccess = true;
             for (let i = 0; i < this.sudokuGrids.length; i++) {
@@ -100,6 +136,11 @@ export default {
                 alert('游戏失败！');
             }
         },
+        //
+        isValueInArray(value, arr) {
+            // 检查value是否存在于数组arr中
+            return arr.includes(value);
+        },
         // 判断游戏是否失败，是否有空格被判断无法填入任何数字
         isValidMove(gridIndex, rowIndex, colIndex) {
             const availableOptions = this.getAvailableOptions(gridIndex, rowIndex, colIndex);
@@ -108,15 +149,19 @@ export default {
             }
             return true;
         },
-        // 根据数独的游戏的规则获取空格能填入的数字
-        getAvailableOptions(gridIndex, rowIndex, colIndex) {
-            const row = this.sudokuGrids[gridIndex][rowIndex];
-            const column = this.getColumn(colIndex);
-            const grid = this.getGrid(gridIndex, rowIndex, colIndex);
-            const usedNumbers = [...row, ...column, ...grid];
-            const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(num => !usedNumbers.includes(num));
+        getAvailableOptions() {
+            const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
             return availableOptions;
         },
+        // // 根据数独的游戏的规则获取空格能填入的数字
+        // getAvailableOptions(gridIndex, rowIndex, colIndex) {
+        //     const row = this.sudokuGrids[gridIndex][rowIndex];
+        //     const column = this.getColumn(colIndex);
+        //     const grid = this.getGrid(gridIndex, rowIndex, colIndex);
+        //     const usedNumbers = [...row, ...column, ...grid];
+        //     const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(num => !usedNumbers.includes(num));
+        //     return availableOptions;
+        // },
         getColumn(colIndex) {
             const column = [];
             for (let i = 0; i < this.sudokuGrids.length; i++) {
@@ -137,6 +182,45 @@ export default {
             }
             return grid;
         },
+        getGrid_index(gridIndex, rowIndex, colIndex, value) {//获取当前3*3数组中已有数字的位置
+            var colindex = ''
+            var rowindex = ''
+            const startRow = Math.floor(rowIndex / 3) * 3;
+            const startCol = Math.floor(colIndex / 3) * 3;
+            for (let i = startRow; i < startRow + 3; i++) {
+                const row = this.sudokuGrids[gridIndex][i];
+                for (let j = startCol; j < startCol + 3; j++) {
+                    if (row[j] === value) {
+                        colindex = j;
+                        rowindex = i;
+                        break;
+                    }
+                }
+            }
+            return [colindex, rowindex]
+        },
+        getRow_index(row,selectedValue){//获取当前行中已有数字的位置
+            var colindex = ''
+            for (let i = 0; i < row.length; i++) {
+                if (row[i] === selectedValue) {
+                    colindex = i;
+                    break;
+                }
+            }
+            return colindex
+        },
+        getCol_index(column,selectedValue)//获取当前列中已有数字的位置
+        {
+            var rowindex = ''
+            for (let i = 0; i < column.length; i++) {
+                if (column[i] === selectedValue) {
+                    rowindex = i;
+                    break;
+                }
+            }
+            return rowindex
+        },
+
         // web提醒，提醒玩家是否执行相关按钮操作，玩家选择“确定”才会执行相关操作
         confirmAction(handler, ...args) {
             if (window.confirm('确定要执行此操作吗？')) {
@@ -145,7 +229,7 @@ export default {
         },
         // 重新开始当前游戏，重新初始化显示的图表
         restartlevel() {
-            this.redCells=[];
+            this.redCells = [];
             this.sudokuGrids = JSON.parse(JSON.stringify(this.sudokuGrids_copy));
         },
         // 根据玩家的选择重新开始不同难度的新游戏
@@ -171,8 +255,6 @@ export default {
                     this.sudoAnswer.push(obj.result)
                 });
                 this.sudokuGrids_copy = JSON.parse(JSON.stringify(this.sudokuGrids)); // 将新获取的数独数据保存到sudokuGrids_copy数组中
-                console.log(this.sudoAnswer);
-                console.log(this.sudokuGrids)
             })
 
         },
@@ -216,7 +298,6 @@ export default {
                     }
                 }
             }
-            console.log(redCells);
             this.redCells = redCells;
         },
         // 用于前端页面判断相应的位置是否标红
