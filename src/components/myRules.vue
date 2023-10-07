@@ -153,15 +153,6 @@ export default {
             const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
             return availableOptions;
         },
-        // // 根据数独的游戏的规则获取空格能填入的数字
-        // getAvailableOptions(gridIndex, rowIndex, colIndex) {
-        //     const row = this.sudokuGrids[gridIndex][rowIndex];
-        //     const column = this.getColumn(colIndex);
-        //     const grid = this.getGrid(gridIndex, rowIndex, colIndex);
-        //     const usedNumbers = [...row, ...column, ...grid];
-        //     const availableOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(num => !usedNumbers.includes(num));
-        //     return availableOptions;
-        // },
         getColumn(colIndex) {
             const column = [];
             for (let i = 0; i < this.sudokuGrids.length; i++) {
@@ -252,9 +243,18 @@ export default {
                 this.sudoList = response.data.data;
                 this.sudoList.forEach((obj) => {
                     this.sudokuGrids.push(obj.finalResult);
-                    this.sudoAnswer.push(obj.result)
                 });
                 this.sudokuGrids_copy = JSON.parse(JSON.stringify(this.sudokuGrids)); // 将新获取的数独数据保存到sudokuGrids_copy数组中
+            })
+
+        
+            const data2 = {
+                params: {
+                    sudokus: this.sudokuGrids
+                }
+            }
+            axios.post('http://43.138.171.179:9000/sudoku/solve', data2).then((response) => { //获取求解数据
+                this.sudoAnswer = response.data.data; //存放答案
             })
 
         },

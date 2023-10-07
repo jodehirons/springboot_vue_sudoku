@@ -1,4 +1,3 @@
-
 import { shallowMount } from '@vue/test-utils';
 import MyRules from './src/components/myRules.vue';
 
@@ -9,9 +8,9 @@ describe('myRules.vue', () => {
     wrapper = shallowMount(MyRules);
   });
 
-  afterEach(() => {
-    wrapper.destroy();
-  });
+  // afterEach(() => {
+  //   wrapper.destroy();
+  // });
 
   // 辅助函数，模拟方法调用并断言结果
   const testMethod = (methodName, ...args) => {
